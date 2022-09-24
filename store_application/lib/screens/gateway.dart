@@ -1,15 +1,26 @@
+import 'package:bot_toast/bot_toast.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
+import 'package:flutter/services.dart';
+
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 
-class GateWayPage extends StatelessWidget {
-  GateWayPage({super.key});
+import '../models/account/account.dart';
+import '../models/quttaiatGateway/quttaiatGateway.dart';
 
-  final String code = '123456789';
-  final String status = 'PENDING';
+// ignore: must_be_immutable
+class GateWayPage extends StatefulWidget {
+  GateWayPage({super.key, required this.quttaiatGateway});
+
+  QuttaiatGateway quttaiatGateway;
+
+  @override
+  State<GateWayPage> createState() => _GateWayPageState();
+}
+
+class _GateWayPageState extends State<GateWayPage> {
   // final String status = 'DONE';
-  // final String status = 'CANCELLED';
-
   Color getColor(String status) {
     switch (status) {
       case 'PENDING':
@@ -25,169 +36,179 @@ class GateWayPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      //TODO: Change the duration later
-      future: Future.delayed(Duration(seconds: 0)),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          return StreamBuilder<dynamic>(
-              stream: Future.delayed(Duration(seconds: 4)).asStream(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  return FutureBuilder(
-                      future: Future.delayed(Duration(seconds: 5)),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.done) {
-                          Navigator.pop(context);
-                        }
-                        return Scaffold(
-                          appBar: AppBar(
-                            title: Text('Done'),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Payment'),
+      ),
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('quttaiatGateway')
+            .doc(widget.quttaiatGateway.id)
+            .snapshots(),
+        builder: ((context, snapshot) {
+          if (snapshot.hasError) {
+            return Text('Error = ${snapshot.error}');
+          }
+
+          if (snapshot.hasData) {
+            var output = snapshot.data;
+
+            if (output == null) {
+              return SizedBox();
+            }
+            final data = QuttaiatGateway.fromJson(output.data()!);
+
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Spacer(
+                    flex: 3,
+                  ),
+                  Container(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: PrettyQr(
+                            data: data.id,
+                            elementColor:
+                                Theme.of(context).colorScheme.onSurface,
+                            size: 150,
+                            roundEdges: true,
                           ),
-                          body: Center(
-                            // done
-                            child: Lottie.network(
-                              'https://assets10.lottiefiles.com/datafiles/sDi8S3t9mRlEH6q/data.json',
-                              repeat: false,
-                              height: 300,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              onPressed: () async {
+                                await Clipboard.setData(ClipboardData(
+                                    text: widget.quttaiatGateway.id));
+                                BotToast.showText(
+                                    text: 'Copy ${widget.quttaiatGateway.id}');
+                              },
+                              icon: Icon(Icons.copy),
                             ),
-                            // error
-                            // child: Lottie.network(
-                            //   'https://assets7.lottiefiles.com/packages/lf20_qpwbiyxf.json',
-                            //   height: 300,
-                            //   repeat: false,
-                            // ),
-                          ),
-                        );
-                      });
-                } else {
-                  return Scaffold(
-                    appBar: AppBar(
-                      title: Text('Payment'),
+                            SelectableText(
+                              data.id,
+                              style: Theme.of(context).textTheme.headline6,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    body: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Spacer(
-                            flex: 3,
-                          ),
-                          Container(
-                            child: Column(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: PrettyQr(
-                                    data: code,
-                                    elementColor:
-                                        Theme.of(context).colorScheme.onSurface,
-                                    size: 150,
-                                    roundEdges: true,
-                                  ),
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    IconButton(
-                                      onPressed: () {},
-                                      icon: Icon(Icons.copy),
-                                    ),
-                                    Text(
-                                      code,
-                                      style:
-                                          Theme.of(context).textTheme.headline6,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Spacer(
-                            flex: 1,
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                'Quttia Status:',
-                                style: Theme.of(context).textTheme.headline6,
-                              ),
-                              Container(
-                                margin: EdgeInsets.only(left: 8),
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: getColor(status),
-                                ),
-                                child: Text(
-                                  status.toLowerCase(),
-                                  style: Theme.of(context).textTheme.headline6,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            height: 100,
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              children: List.generate(
-                                5,
-                                (index) => Container(
-                                  width: 60,
-                                  height: 60,
-                                  alignment: Alignment.center,
-                                  margin: EdgeInsets.all(10),
-                                  // child: Text('A'),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    image: DecorationImage(
-                                      image: NetworkImage(
-                                          'https://ui-avatars.com/api/?name=Abdullah'),
-                                    ),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Spacer(
-                            flex: 3,
-                          ),
-                          ElevatedButton(
-                            onPressed: () {},
-                            child: Text('Cancel'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.errorContainer,
-                              foregroundColor: Theme.of(context)
-                                  .colorScheme
-                                  .onErrorContainer,
-                              // shape: RoundedRectangleBorder(
-                              //   borderRadius: BorderRadius.circular(10),
-                              // ),
-                            ),
-                          ),
-                          Spacer(
-                            flex: 4,
-                          ),
-                        ],
+                  ),
+                  Spacer(
+                    flex: 1,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        'Quttia Status:',
+                        style: Theme.of(context).textTheme.headline6,
                       ),
+                      Container(
+                        margin: EdgeInsets.only(left: 8),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: getColor(data.status),
+                        ),
+                        child: Text(
+                          data.status.toLowerCase(),
+                          style: Theme.of(context).textTheme.headline6,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Total: ${data.totalPrice} KD',
+                    style: Theme.of(context).textTheme.headline6,
+                  ),
+                  Text(
+                    'Per person: ${data.totalPrice / data.numberOfUser} KD',
+                    style: Theme.of(context).textTheme.headline6,
+                  ),
+                  Container(
+                    height: 100,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: List.generate(data.accounts.length, (index) {
+                        final userId = data.accounts[index];
+
+                        return StreamBuilder<
+                            DocumentSnapshot<Map<String, dynamic>>>(
+                          stream: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(userId)
+                              .snapshots(),
+                          builder: ((context, snapshot) {
+                            if (snapshot.hasError) {
+                              return Text('Errror');
+                            }
+
+                            if (snapshot.hasData) {
+                              var output = snapshot.data!.data();
+
+                              final data = Account.fromJson(output!);
+
+                              return Container(
+                                width: 60,
+                                height: 60,
+                                alignment: Alignment.center,
+                                margin: EdgeInsets.all(10),
+                                // child: Text('A'),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  image: DecorationImage(
+                                    image: NetworkImage(
+                                        'https://ui-avatars.com/api/?name=${data.email}'),
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                              );
+                            }
+
+                            return SizedBox();
+                          }),
+                        );
+                      }),
                     ),
-                  );
-                }
-              });
-        } else {
-          return Scaffold(
-            appBar: AppBar(),
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+                  ),
+                  Spacer(
+                    flex: 3,
+                  ),
+                  ElevatedButton(
+                    onPressed: () {},
+                    child: Text('Cancel'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.errorContainer,
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onErrorContainer,
+                      // shape: RoundedRectangleBorder(
+                      //   borderRadius: BorderRadius.circular(10),
+                      // ),
+                    ),
+                  ),
+                  Spacer(
+                    flex: 4,
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Center(
+            child: CircularProgressIndicator(),
           );
-        }
-      },
+        }),
+      ),
     );
   }
 }
